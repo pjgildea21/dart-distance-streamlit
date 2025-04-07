@@ -12,7 +12,7 @@ else:
     st.image(img_path, caption="Click to mark TARGET and HIT")
 
     # Streamlit canvas
-    click_data = st.experimental_data_editor(pd.DataFrame(columns=["Label", "X", "Y"]), num_rows="dynamic", key="click_log")
+    click_data = st.data_editor(pd.DataFrame(columns=["Label", "X", "Y"]), num_rows="dynamic", key="click_log")
 
     st.markdown("👆 Add two rows: one for target, one for hit.")
 
