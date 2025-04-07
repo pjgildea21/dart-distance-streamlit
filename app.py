@@ -25,9 +25,8 @@ image_url = get_image_url(img_path)
 
 # Create drawing canvas
 canvas_result = st_canvas(
-    fill_color="rgba(255, 0, 0, 0.4)",
+    fill_color="rgba(255, 0, 0, 0.4)",  # red marker
     stroke_width=10,
-    background_image=None,
     background_image_url=image_url,
     update_streamlit=True,
     height=image.height,
