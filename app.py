@@ -1,56 +1,62 @@
 import streamlit as st
+from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 import pandas as pd
 import numpy as np
-from PIL import Image
 import os
 
-# Load dartboard image
+st.title("🎯 Dart Miss Distance Tracker")
+
+# Load and display the dartboard image
 img_path = "dartboard.png"
-if not os.path.exists(img_path):
-    st.error("Dartboard image not found. Please upload 'dartboard.png' to the same folder.")
-else:
-    st.image(img_path, caption="Click to mark TARGET and HIT")
+image = Image.open(img_path)
+st.image(image, caption="Click twice: first for TARGET, then for HIT")
 
-    # Streamlit canvas
-    click_data = st.data_editor(pd.DataFrame(columns=["Label", "X", "Y"]), num_rows="dynamic", key="click_log")
+# Create canvas to click on the image
+canvas_result = st_canvas(
+    fill_color="rgba(255, 0, 0, 0.3)",  # Red click dot
+    stroke_width=5,
+    background_image=image,
+    update_streamlit=True,
+    height=image.height,
+    width=image.width,
+    drawing_mode="point",
+    key="canvas",
+)
 
-    st.markdown("👆 Add two rows: one for target, one for hit.")
+# Store and process points
+if canvas_result.json_data is not None:
+    objects = canvas_result.json_data["objects"]
+    if len(objects) >= 2:
+        # Get the last two points
+        target_obj = objects[-2]
+        hit_obj = objects[-1]
 
-    if len(click_data) == 2:
-        # Extract points
-        point1 = click_data.iloc[0]
-        point2 = click_data.iloc[1]
-
-        if point1["Label"].lower() == "target":
-            target = (point1["X"], point1["Y"])
-            hit = (point2["X"], point2["Y"])
-        else:
-            target = (point2["X"], point2["Y"])
-            hit = (point1["X"], point1["Y"])
+        target_x, target_y = target_obj["left"], target_obj["top"]
+        hit_x, hit_y = hit_obj["left"], hit_obj["top"]
 
         # Calculate distance
-        distance = np.sqrt((target[0] - hit[0])**2 + (target[1] - hit[1])**2)
+        distance = np.sqrt((target_x - hit_x) ** 2 + (target_y - hit_y) ** 2)
+        st.success(f"Miss distance: **{distance:.2f} pixels**")
 
-        st.success(f"🎯 Miss Distance: **{distance:.2f} pixels**")
-
-        # Store the throw
+        # Save throw
         if "throws" not in st.session_state:
-            st.session_state.throws = []
+            st.session_state["throws"] = []
 
-        if st.button("Save Throw"):
-            st.session_state.throws.append({
-                "target_x": target[0],
-                "target_y": target[1],
-                "hit_x": hit[0],
-                "hit_y": hit[1],
+        if st.button("✅ Save This Throw"):
+            st.session_state["throws"].append({
+                "target_x": target_x,
+                "target_y": target_y,
+                "hit_x": hit_x,
+                "hit_y": hit_y,
                 "miss_distance_px": distance
             })
 
-    # Show all throws
-    if "throws" in st.session_state and len(st.session_state.throws) > 0:
-        df = pd.DataFrame(st.session_state.throws)
-        st.subheader("📊 Throw Log")
-        st.dataframe(df)
+# Show saved data
+if "throws" in st.session_state and len(st.session_state["throws"]) > 0:
+    df = pd.DataFrame(st.session_state["throws"])
+    st.subheader("📋 Throw Log")
+    st.dataframe(df)
 
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download as CSV", csv, "dart_data.csv", "text/csv")
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download CSV", csv, "dart_data.csv", "text/csv")
